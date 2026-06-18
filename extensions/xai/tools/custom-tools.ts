@@ -8,14 +8,15 @@ import { resolveXaiRoute } from "../routing";
 import { extractResponsesText, messageFromError, statusFromError } from "../text";
 import { xaiTextInput, xaiToolError } from "./common";
 import { activeXaiModel, isXaiNetworkToolActive, type XaiNetworkToolName } from "./model-scope";
+import { registerXaiXSearchRawTool } from "./x-search-raw";
 
-function activeModelForXaiTool(pi: ExtensionAPI, ctx: any, toolName: XaiNetworkToolName) {
+export function activeModelForXaiTool(pi: ExtensionAPI, ctx: any, toolName: XaiNetworkToolName) {
   const model = activeXaiModel(ctx);
   if (!model || !isXaiNetworkToolActive(pi, toolName)) return undefined;
   return model;
 }
 
-function xaiToolDisabledError(toolName: XaiNetworkToolName, details: Record<string, unknown> = {}) {
+export function xaiToolDisabledError(toolName: XaiNetworkToolName, details: Record<string, unknown> = {}) {
   return xaiToolError(
     `Error: ${toolName} is disabled. Select an xAI/Grok model, run /xai-tools to enable ${toolName}, and request it explicitly. No xAI request was sent.`,
     { error: true, ...details },
@@ -257,6 +258,8 @@ Be specific and cite examples where helpful.`;
         return { content: [{ type: "text", text }], details: { query: params.query } };
       },
     } as any);
+
+    registerXaiXSearchRawTool(pi);
 
     pi.registerTool({
       name: "xai_code_execution",

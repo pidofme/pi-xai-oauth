@@ -222,6 +222,7 @@ function printNextSteps(nonInteractive = false) {
   console.log("   • xai_multi_agent       — Multi-agent research with web/X tools");
   console.log("   • xai_web_search        — Native xAI web search");
   console.log("   • xai_x_search          — Native X/Twitter search");
+  console.log("   • xai_x_search_raw      — Structured raw-ish X post/image transcriptions");
   console.log("   • xai_code_execution    — Native code interpreter");
   console.log("   • xai_generate_image    — Image generation");
   console.log("   • xai_analyze_image     — Image analysis");

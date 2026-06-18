@@ -33,7 +33,7 @@ pi --model grok-4.5:high "Review this architecture for failure modes"
 pi --model grok-4.5:low "Quick status check"   # fast mode
 ```
 
-This package adds xAI's **account-specific OAuth model catalog** to pi, with **Grok 4.5** as the offline fallback/default, proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_web_search`, `xai_x_search`, etc.). Models such as Grok Build, Composer, Grok 4.3, and Grok 4.20 appear only when xAI returns them for the authenticated account.
+This package adds xAI's **account-specific OAuth model catalog** to pi, with **Grok 4.5** as the offline fallback/default, proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_web_search`, `xai_x_search`, `xai_x_search_raw`, etc.). Models such as Grok Build, Composer, Grok 4.3, and Grok 4.20 appear only when xAI returns them for the authenticated account.
 
 > **Latest release:** `pi-xai-oauth` **1.3.5** keeps the highlighted `/xai-tools` row in place after toggling, so multiple tools can be configured without repeatedly navigating from the top. Version 1.3.4 made every network-backed xAI helper an explicit, session-scoped opt-in through `/xai-tools`, including paid image generation, and made disabled tools fail before OAuth credential lookup or network access. Existing npm installs should run `pi update npm:pi-xai-oauth`; local checkout installs should keep only one copy with `pi remove npm:pi-xai-oauth && pi install .`.
 >
@@ -80,7 +80,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the complete version-by-version feature and
 - **Coding models when entitled** — Grok Build, Composer, and other models appear only when xAI includes them in the account catalog
 - **Reasoning support** — parses supplied reasoning capability and thinking levels while preserving known model compatibility
 - **Bounded last-known-good cache** — avoids routine startup delay and falls back safely when discovery is offline or unavailable
-- **Custom xAI tools** — generate text, web search, X/Twitter search, multi-agent research, code analysis
+- **Custom xAI tools** — generate text, web search, X/Twitter search (summary and raw structured modes), multi-agent research, code analysis
 - **Credential-aware Responses routing** — OAuth/session traffic uses the official `https://cli-chat-proxy.grok.com/v1` endpoint for every Grok model; the public `api.x.ai` Responses endpoint is reserved for a future explicit API-key path
 
 > **✅ Verified (May 2026)**: All custom xAI tools (`xai_generate_text`, `xai_x_search`, `xai_web_search`, `xai_code_execution`, `xai_critique`, `xai_multi_agent`, `xai_deep_research`, image tools, etc.) have been tested end-to-end after the OAuth + payload repair. The provider now correctly handles mixed-model requests and native xAI tool shapes.
@@ -133,7 +133,7 @@ Then optionally configure it as default:
 
 > **⚠️ Important: install only one copy**
 >
-> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_web_search`, and `xai_x_search`. If you install more than one copy — for example `npm:pi-xai-oauth` plus a local checkout, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
+> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_web_search`, `xai_x_search`, and `xai_x_search_raw`. If you install more than one copy — for example `npm:pi-xai-oauth` plus a local checkout, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
 >
 > Check with:
 > ```bash
@@ -426,6 +426,22 @@ Opt-in X (Twitter) search using xAI's native `x_search` tool and the active xAI 
 {
   "query": "grok 4.5"
 }
+```
+
+### `xai_x_search_raw`
+Search X with xAI's native `x_search` tool and return structured post transcriptions that stay as close to the visible original text as Grok can retrieve. It can ask xAI to inspect post images, describe each image objectively, and transcribe clearly visible image text.
+
+Notes:
+- It does not expose a `count` parameter; xAI/Grok decides how many matching posts are returned in one response.
+- It does **not** return actual image files or reliable raw media URLs.
+- It is **not** a raw X API object dump; post and image content is still read and transcribed by Grok through xAI server-side search.
+- It avoids overall summaries, sentiment analysis, trend analysis, and conclusions so the currently selected main model can analyze the structured results independently.
+
+Example prompt:
+
+```text
+Use xai_x_search_raw to find recent posts about AMD ROCm.
+Return the raw tool results first, then analyze them independently.
 ```
 
 ### `xai_code_execution`

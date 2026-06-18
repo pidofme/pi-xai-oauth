@@ -26,3 +26,8 @@
 ## Residual
 
 - No live xAI authentication or model request is part of this offline compatibility gate.
+
+## Raw X Search tool (xai_x_search_raw)
+- [x] Rebasing branch preserves the raw X search tool on top of the Pi 0.80.10 / 1.3.5 baseline.
+- [x] Tool returns structured post/media transcriptions without changing `xai_x_search`.
+- [x] Tool keeps `count` omitted, adds nullable `media[].url`, and supports one-level `post_type` / `referenced_post` metadata.
