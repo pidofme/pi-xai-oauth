@@ -75,9 +75,10 @@ export function buildXSearchRawJsonSchema(): Record<string, any> {
               items: {
                 type: "object",
                 additionalProperties: false,
-                required: ["type", "inspection_status", "description", "visible_text", "confidence"],
+                required: ["type", "url", "inspection_status", "description", "visible_text", "confidence"],
                 properties: {
                   type: { type: "string", enum: ["image", "animated_gif", "video_thumbnail", "unknown"] },
+                  url: nullableString,
                   inspection_status: { type: "string", enum: ["inspected", "unavailable", "uncertain"] },
                   description: nullableString,
                   visible_text: nullableString,
@@ -119,15 +120,17 @@ For every image attached to a post:
 
 1. Inspect each image separately when image access is available.
 2. Provide an objective description of directly visible content.
-3. Transcribe all clearly readable text as accurately as possible.
-4. Preserve visible labels, numbers, headings, legends, usernames, dates,
+3. Return the direct media URL only when it is explicitly available; otherwise return null.
+4. Never infer, guess, construct, or scrape media URLs from a post URL.
+5. Transcribe all clearly readable text as accurately as possible.
+6. Preserve visible labels, numbers, headings, legends, usernames, dates,
    prices, percentages, and other important text.
-5. For charts, tables, screenshots, documents, memes, or diagrams, describe
+7. For charts, tables, screenshots, documents, memes, or diagrams, describe
    their visible structure and elements without drawing broader conclusions.
-6. Do not infer hidden context or facts that are not visible.
-7. If the image cannot actually be inspected, mark it as unavailable.
-8. Do not claim that an image was inspected unless it was visually analyzed.
-9. If the post has no images, return an empty media array.
+8. Do not infer hidden context or facts that are not visible.
+9. If the image cannot actually be inspected, mark it as unavailable.
+10. Do not claim that an image was inspected unless it was visually analyzed.
+11. If the post has no images, return an empty media array.
 
 Do not provide:
 

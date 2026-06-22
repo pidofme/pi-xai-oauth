@@ -433,7 +433,8 @@ Search X with xAI's native `x_search` tool and return structured post transcript
 
 Notes:
 - It does not expose a `count` parameter; xAI/Grok decides how many matching posts are returned in one response.
-- It does **not** return actual image files or reliable raw media URLs.
+- It does **not** return actual image files.
+- Media items include a nullable `url` field only when xAI/Grok explicitly provides a media URL; it does not guess, scrape, or derive image URLs from post URLs.
 - It is **not** a raw X API object dump; post and image content is still read and transcribed by Grok through xAI server-side search.
 - It avoids overall summaries, sentiment analysis, trend analysis, and conclusions so the currently selected main model can analyze the structured results independently.
 
