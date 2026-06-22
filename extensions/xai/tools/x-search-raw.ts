@@ -40,6 +40,51 @@ export function buildXSearchRawTool(params: Pick<XSearchRawParams, "since" | "un
 export function buildXSearchRawJsonSchema(): Record<string, any> {
   const nullableString = { type: ["string", "null"] };
   const nullableNumber = { type: ["number", "null"], minimum: 0 };
+  const postType = { type: "string", enum: ["original", "repost", "quote", "reply", "unknown"] };
+  const metrics = {
+    type: "object",
+    additionalProperties: false,
+    required: ["replies", "reposts", "likes", "bookmarks", "views"],
+    properties: {
+      replies: nullableNumber,
+      reposts: nullableNumber,
+      likes: nullableNumber,
+      bookmarks: nullableNumber,
+      views: nullableNumber,
+    },
+  };
+  const media = {
+    type: "array",
+    items: {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "url", "inspection_status", "description", "visible_text", "confidence"],
+      properties: {
+        type: { type: "string", enum: ["image", "animated_gif", "video_thumbnail", "unknown"] },
+        url: nullableString,
+        inspection_status: { type: "string", enum: ["inspected", "unavailable", "uncertain"] },
+        description: nullableString,
+        visible_text: nullableString,
+        confidence: { type: "string", enum: ["high", "medium", "low", "unknown"] },
+      },
+    },
+  };
+  const referencedPost = {
+    type: ["object", "null"],
+    additionalProperties: false,
+    required: ["author_name", "handle", "posted_at", "url", "text", "post_type", "referenced_post", "metrics", "media"],
+    properties: {
+      author_name: nullableString,
+      handle: nullableString,
+      posted_at: nullableString,
+      url: nullableString,
+      text: nullableString,
+      post_type: postType,
+      referenced_post: { type: "null" },
+      metrics,
+      media,
+    },
+  };
 
   return {
     type: "object",
@@ -51,41 +96,17 @@ export function buildXSearchRawJsonSchema(): Record<string, any> {
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["author_name", "handle", "posted_at", "url", "text", "metrics", "media"],
+          required: ["author_name", "handle", "posted_at", "url", "text", "post_type", "referenced_post", "metrics", "media"],
           properties: {
             author_name: nullableString,
             handle: nullableString,
             posted_at: nullableString,
             url: { type: "string" },
             text: { type: "string" },
-            metrics: {
-              type: "object",
-              additionalProperties: false,
-              required: ["replies", "reposts", "likes", "bookmarks", "views"],
-              properties: {
-                replies: nullableNumber,
-                reposts: nullableNumber,
-                likes: nullableNumber,
-                bookmarks: nullableNumber,
-                views: nullableNumber,
-              },
-            },
-            media: {
-              type: "array",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["type", "url", "inspection_status", "description", "visible_text", "confidence"],
-                properties: {
-                  type: { type: "string", enum: ["image", "animated_gif", "video_thumbnail", "unknown"] },
-                  url: nullableString,
-                  inspection_status: { type: "string", enum: ["inspected", "unavailable", "uncertain"] },
-                  description: nullableString,
-                  visible_text: nullableString,
-                  confidence: { type: "string", enum: ["high", "medium", "low", "unknown"] },
-                },
-              },
-            },
+            post_type: postType,
+            referenced_post: referencedPost,
+            metrics,
+            media,
           },
         },
       },
@@ -115,8 +136,21 @@ For every post:
 5. If a field is unavailable, return null. Never estimate or invent values.
 6. Keep different posts as separate items.
 7. Only return a post when its direct status URL is available.
+8. Set post_type to one of: original, repost, quote, reply, or unknown.
+9. Use original for ordinary standalone posts, repost for pure reposts/retweets,
+   quote for quote posts, reply for replies, and unknown when the relationship
+   cannot be determined reliably from visible/search-provided information.
+10. Do not infer, guess, or invent post relationships.
+11. Set referenced_post to null for original or unknown posts, and whenever the
+    referenced/reposted/quoted/replied-to post is not explicitly visible or
+    cannot be reliably transcribed.
+12. For repost, quote, or reply posts, include referenced_post only when the
+    referenced post is explicitly available. Transcribe it using the same
+    field semantics; use null for any referenced_post field, including url,
+    that is unavailable. Do not nest beyond one level; referenced_post inside
+    a referenced_post must always be null.
 
-For every image attached to a post:
+For every image attached to a post or referenced_post:
 
 1. Inspect each image separately when image access is available.
 2. Provide an objective description of directly visible content.
