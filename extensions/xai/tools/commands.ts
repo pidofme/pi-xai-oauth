@@ -20,6 +20,7 @@ const NETWORK_TOOL_OPTIONS: readonly NetworkToolOption[] = [
   { name: "xai_generate_text", category: "generation", costRisk: "token usage", summary: "separate Grok response" },
   { name: "xai_web_search", category: "search", costRisk: "token + tool", summary: "native xAI web search" },
   { name: "xai_x_search", category: "search", costRisk: "token + tool", summary: "native xAI X search" },
+  { name: "xai_x_search_raw", category: "search", costRisk: "token + tool", summary: "structured raw X post/media transcriptions" },
   { name: "xai_multi_agent", category: "research", costRisk: "high/variable", summary: "4- or 16-agent web/X research" },
   { name: "xai_deep_research", category: "research", costRisk: "high/variable", summary: "multi-step web/X research" },
   { name: "xai_code_execution", category: "execution", costRisk: "token + tool", summary: "xAI code interpreter" },

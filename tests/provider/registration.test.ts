@@ -37,7 +37,7 @@ describe("provider registration", () => {
       cost: { input: 2, cacheRead: 0.5, output: 6 },
       thinkingLevelMap: { off: null },
     });
-    expect(harness.tools.size).toBe(19);
+    expect(harness.tools.size).toBe(20);
     expect(harness.commands.has("xai-tools")).toBe(true);
     expect([...harness.handlers.keys()]).toEqual(
       expect.arrayContaining([

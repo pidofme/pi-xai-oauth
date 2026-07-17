@@ -1,9 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { resolveXaiAuthToken } from "../auth";
+import { resolveXaiCredential } from "../auth";
 import { DEFAULT_XAI_MODEL } from "../constants";
 import { createXaiResponse } from "../responses";
 import { extractResponsesText, messageFromError, statusFromError } from "../text";
 import { xaiTextInput, xaiToolError } from "./common";
+import { activeXaiModel, isXaiNetworkToolActive } from "./model-scope";
 
 const MAX_SAFE_RAW_OUTPUT_CHARS = 2_000;
 
@@ -182,7 +183,7 @@ Return only data matching the required JSON schema.`;
 }
 
 /** Build the xAI Responses API request body for raw X Search. */
-export function buildXSearchRawRequestBody(params: XSearchRawParams): { body: Record<string, any>; prompt: string } {
+export function buildXSearchRawRequestBody(params: XSearchRawParams, modelId = DEFAULT_XAI_MODEL): { body: Record<string, any>; prompt: string } {
   const query = typeof params.query === "string" ? params.query : "";
   const prompt = buildXSearchRawPrompt(query);
   const xSearchTool = buildXSearchRawTool(params);
@@ -190,7 +191,7 @@ export function buildXSearchRawRequestBody(params: XSearchRawParams): { body: Re
   return {
     prompt,
     body: {
-      model: DEFAULT_XAI_MODEL,
+      model: modelId,
       input: xaiTextInput(prompt),
       reasoning: { effort: "low" },
       tools: [xSearchTool],
@@ -341,7 +342,8 @@ export function registerXaiXSearchRawTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "xai_x_search_raw",
     label: "xAI Raw X Search",
-    description: "Search X using xAI native X Search and return structured post transcriptions with image descriptions and visible image text, without summaries or trend analysis.",
+    description: "Opt-in paid raw X search using xAI native X Search. Enable via /xai-tools and return structured post transcriptions with image descriptions and visible image text, without summaries or trend analysis.",
+    promptGuidelines: ["Call xai_x_search_raw only when the user explicitly requests raw structured xAI X search results."],
     parameters: {
       type: "object",
       properties: {
@@ -352,8 +354,15 @@ export function registerXaiXSearchRawTool(pi: ExtensionAPI) {
       required: ["query"],
     },
     execute: async (_toolCallId: string, params: XSearchRawParams, _signal: any, _onUpdate: any, ctx: any) => {
-      const apiKey = await resolveXaiAuthToken(ctx);
-      if (!apiKey) {
+      const activeModel = activeXaiModel(ctx);
+      if (!activeModel || !isXaiNetworkToolActive(pi, "xai_x_search_raw")) {
+        return xaiToolError(
+          "Error: xai_x_search_raw is disabled. Select an xAI/Grok model, run /xai-tools to enable xai_x_search_raw, and request it explicitly. No xAI request was sent.",
+          { error: true, query: params?.query },
+        );
+      }
+      const credential = await resolveXaiCredential(ctx);
+      if (!credential) {
         return xaiToolError("Error: No xAI OAuth credentials found. Please run the OAuth login first.", { query: params?.query });
       }
 
@@ -361,10 +370,10 @@ export function registerXaiXSearchRawTool(pi: ExtensionAPI) {
         return structuredErrorResult("missing_query", "xai_x_search_raw requires a query string.", params || {});
       }
 
-      const { body } = buildXSearchRawRequestBody(params);
+      const { body } = buildXSearchRawRequestBody(params, activeModel.id || DEFAULT_XAI_MODEL);
       let data: any;
       try {
-        data = await createXaiResponse(apiKey, body, _signal);
+        data = await createXaiResponse(credential, body, _signal);
       } catch (error) {
         const status = statusFromError(error);
         const message = safeDiagnosticText(messageFromError(error));

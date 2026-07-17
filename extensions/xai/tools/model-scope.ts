@@ -8,6 +8,7 @@ export const XAI_NETWORK_TOOL_NAMES = [
   "xai_generate_text",
   "xai_web_search",
   "xai_x_search",
+  "xai_x_search_raw",
   "xai_multi_agent",
   "xai_deep_research",
   "xai_code_execution",

@@ -182,7 +182,7 @@ describe("/xai-tools command", () => {
             component.render(160).find((line: string) => line.startsWith("> ")),
           );
           component.handleInput("pagedown");
-          for (let i = 0; i < 6; i++) component.handleInput("down");
+          for (let i = 0; i < 7; i++) component.handleInput("down");
           selected.push(
             component.render(160).find((line: string) => line.startsWith("> ")),
           );
@@ -202,7 +202,7 @@ describe("/xai-tools command", () => {
     expect(isXaiNetworkToolActive(h.api, "xai_generate_image")).toBe(true);
   });
 
-  it("wraps Page Up and Page Down when Composer exposes exactly ten rows", async () => {
+  it("wraps Page Up and Page Down when Composer exposes more rows than the page size", async () => {
     const { h, notices } = setup();
     let afterPageUp = "";
     let afterPageDown = "";
@@ -244,7 +244,7 @@ describe("/xai-tools command", () => {
     });
 
     await h.commands.get("xai-tools").handler("", ctx);
-    expect(afterPageUp).toMatch(/WebSearch/);
+    expect(afterPageUp).toMatch(/xai_web_search/);
     expect(afterPageDown).toMatch(/xai_generate_text/);
   });
 });

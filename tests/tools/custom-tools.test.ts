@@ -55,6 +55,7 @@ describe("custom xAI tools", () => {
     ["xai_generate_text", { prompt: "guard" }],
     ["xai_web_search", { query: "guard" }],
     ["xai_x_search", { query: "guard" }],
+    ["xai_x_search_raw", { query: "guard" }],
     ["xai_multi_agent", { query: "guard" }],
     ["xai_deep_research", { topic: "guard" }],
     ["xai_code_execution", { code: "print(1)" }],
@@ -135,6 +136,89 @@ describe("custom xAI tools", () => {
     });
     await run("xai_code_execution", { code: "print(4)" });
     expect(requests.at(-1)?.body.tools).toEqual([{ type: "code_interpreter" }]);
+  });
+  it("maps raw X search to strict structured output without count limits", async () => {
+    const post = {
+      author_name: "AMD ROCm",
+      handle: "@ROCmDeveloper",
+      posted_at: "2026-06-01T12:00:00Z",
+      url: "https://x.com/ROCmDeveloper/status/123",
+      text: "ROCm update 🚀\nNew docs are live.",
+      post_type: "quote",
+      referenced_post: {
+        author_name: "AMD Developer Central",
+        handle: "@AMDDevCentral",
+        posted_at: "2026-06-01T11:00:00Z",
+        url: "https://x.com/AMDDevCentral/status/122",
+        text: "ROCm docs update is available now.",
+        post_type: "original",
+        referenced_post: null,
+        metrics: { replies: null, reposts: null, likes: null, bookmarks: null, views: null },
+        media: [],
+      },
+      metrics: { replies: 1, reposts: 2, likes: 3, bookmarks: null, views: 400 },
+      media: [
+        {
+          type: "image",
+          url: "https://x.com/ROCmDeveloper/status/123/photo/1",
+          inspection_status: "inspected",
+          description: "A screenshot of a ROCm release note page.",
+          visible_text: "ROCm Release Notes",
+          confidence: "high",
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: any, init: RequestInit = {}) => {
+        requests.push({ url: String(url), init, body: requestBody(init) });
+        return jsonResponse({
+          id: "resp_raw",
+          output_text: JSON.stringify({ posts: [post] }),
+          citations: ["https://x.com/ROCmDeveloper/status/123", "https://x.com/ROCmDeveloper/status/123"],
+        });
+      }),
+    );
+
+    setXaiNetworkToolActive(h.api, TEST_MODEL, "xai_x_search_raw", true);
+    const controller = new AbortController();
+    const result = await h.tools
+      .get("xai_x_search_raw")
+      .execute(
+        "call",
+        { query: "AMD ROCm", since: "2026-05-01", until: "2026-05-22" },
+        controller.signal,
+        () => {},
+        authContext(TEST_MODEL),
+      );
+
+    const request = requests.at(-1)!;
+    expect(new Headers(request.init.headers).get("Authorization")).toBe("Bearer oauth-token");
+    expect(request.init.signal).toBe(controller.signal);
+    expect(request.body).toMatchObject({
+      model: "grok-4.5",
+      reasoning: { effort: "low" },
+      tools: [{ type: "x_search", enable_image_understanding: true, from_date: "2026-05-01", to_date: "2026-05-22" }],
+      text: { format: { type: "json_schema", name: "x_search_raw_results", strict: true } },
+    });
+    const postSchema = request.body.text.format.schema.properties.posts.items;
+    expect(request.body.text.format.schema.properties.posts.maxItems).toBeUndefined();
+    expect(postSchema.required).toContain("post_type");
+    expect(postSchema.required).toContain("referenced_post");
+    expect(postSchema.properties.referenced_post.properties.referenced_post.type).toBe("null");
+    expect(postSchema.properties.media.items.required).toContain("url");
+    expect(request.body.input[0].content).toMatch(/Do not summarize/i);
+    expect(request.body.input[0].content).toMatch(/Set post_type to one of/i);
+    expect(request.body.input[0].content).toMatch(/do not nest beyond one level/i);
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      posts: [post],
+      citations: ["https://x.com/ROCmDeveloper/status/123"],
+    });
+    expect(result.details).toMatchObject({
+      query: "AMD ROCm",
+      returnedCount: 1,
+      citations: ["https://x.com/ROCmDeveloper/status/123"],
+    });
   });
   it("maps image analysis content in image then text order", async () => {
     await run("xai_analyze_image", {
